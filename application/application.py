@@ -1,89 +1,127 @@
-import random
+import math
 import time
 
+from typing import Optional
+
 from pydoover.docker import DockerApplication, run_app
-from pydoover import ui
 
-from app_config import SampleConfig
-
-
-# UI Will look like this
-
-# Variable : Is Working : Bool
-# Variable : Uptime : Int
-# Parameter : Test Message
-# Variable : Test Output
-# Action : Send this text as an alert
-# Submodule :
-#      Variable : Battery Voltage
-#      Parameter : Low Battery Voltage Alert
-#            Once below this setpoint, send a text and show a warning
-#      StateCommand : Charge Battery Mode
-#           - Charge
-#           - Discharge
-#           - Idle
+from app_config import LocationManagerConfig
 
 
-class SampleApplication(DockerApplication):
-    started: time.time
-    is_working: ui.BooleanVariable
-    send_alert: ui.Action
-    on_text_parameter_change: ui.TextParameter
-    config: SampleConfig  # not necessary, but helps your IDE provide autocomplete!
+class LocationManager(DockerApplication):
+    config: LocationManagerConfig
 
-    def setup(self):
-        self.started = time.time()
-        include_uptime = True
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        # Define the UI
-        self.is_working = ui.BooleanVariable("is_working", "We Working?")
-        ui_elems = (
-            self.is_working,
-            ui.DateTimeVariable("uptime", "Started") if include_uptime else None,
-            self.send_alert,
-            self.on_text_parameter_change,
-            ui.TextVariable("test_output", "This is message we got"),
-            ui.Submodule("battery", "Battery Module", children=[
-                ui.NumericVariable(
-                    "voltage", "Battery Voltage", precision=2, ranges=[
-                        ui.Range("Low", 0, 10, ui.Colour.red),
-                        ui.Range("Normal", 10, 20, ui.Colour.green),
-                        ui.Range("High", 20, 30, ui.Colour.blue),
-                    ]),
-                ui.NumericParameter("low_voltage_alert", "Low Voltage Alert"),
-                ui.StateCommand(
-                    "charge_mode", "Charge Mode", callback=self.on_state_command, user_options=[
-                        ui.Option("charge", "Charge"),
-                        ui.Option("discharge", "Discharge"),
-                        ui.Option("idle", "Idle")
-                    ]),
-            ]),
-        )
+        self.last_published_location = None
+        self.last_location_update_time: Optional[float] = None
 
-        self.ui_manager.add_children(*ui_elems)
+    async def fetch_location(self) -> Optional[dict]:
+        try:
+            location = await self.platform_iface.get_location_async()
+            if not location:
+                self.log("warning", "Failed to fetch location.")
+                return None
 
-    def main_loop(self):
-        self.is_working.current_value = True
-        self.ui_manager.update_variable("voltage", random.randint(900, 2100)/100)
-        self.ui_manager.update_variable("uptime", time.time() - self.started)
+            ## Transform the location data to a dictionary
+            location = {
+                "lat": location.latitude,
+                "long": location.longitude,
+                "alt": location.altitude_m,
+                "accuracy": location.accuracy_m,
+            }
 
-    @ui.action("send_alert", "Send message as alert", position=1)
-    def send_alert(self, new_value):
-        output = self.ui_manager.get_element("test_output").current_value
-        self.log(f"Sending alert: {output}")
-        self.publish_to_channel("significantAlerts", output)
-        self.send_alert.coerce(None)
+            self.log("debug", f"Fetched location: {location}")
+            return location
+        except Exception as e:
+            self.log("error", f"Error fetching location: {e}")
+            return None
 
-    @ui.text_parameter("test_message", "Put in a message")
-    def on_text_parameter_change(self, new_value):
-        self.log(f"New value for test message: {new_value}")
-        # Set the value as an output to the corresponding variable is this case
-        self.get_ui_manager().update_variable("test_output", new_value)
+    @staticmethod
+    def calculate_distance(loc1: dict, loc2: dict) -> float:
+        """
+        Calculate the distance between two locations using the haversine formula.
 
-    def on_state_command(self, new_value):
-        self.log("New value for state command: " + new_value)
+        :param loc1: First location as a dictionary with 'lat' and 'long'.
+        :param loc2: Second location as a dictionary with 'lat' and 'long'.
+        :return: Distance in meters.
+        """
+        R = 6_371_000  # Earth radius in meters
+        lat1, lon1 = math.radians(loc1['lat']), math.radians(loc1['long'])
+        lat2, lon2 = math.radians(loc2['lat']), math.radians(loc2['long'])
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
+    async def handle_location_channel_update(self, channel_name, aggregate):
+        self.log("debug", f"Received update from {channel_name}: {aggregate}")
+        if aggregate and channel_name == "location":
+            recv_location = aggregate
+            if isinstance(aggregate, str):
+                recv_location = {}
+
+            self.last_published_location = {
+                "lat": recv_location.get("lat", None),
+                "long": recv_location.get("long", None),
+                "alt": recv_location.get("alt", None),
+                "accuracy": recv_location.get("accuracy", None),
+            }
+
+    async def publish_location(self, location: dict) -> bool:
+        try:
+            return await self.publish_to_channel("location", location)
+        except Exception as e:
+            self.log("error", f"Error publishing location: {e}")
+            return False
+
+    async def setup(self):
+        self.log("Setting up LocationManager...")
+        self.device_agent.add_subscription("location", self.handle_location_channel_update)
+
+    async def main_loop(self):
+        current_time = time.time()
+
+        # Check if the location update frequency interval has passed
+        if self.last_location_update_time is not None and \
+                (current_time - self.last_location_update_time < self.config.update_freq_secs):
+            self.log("debug", "Location update frequency interval not reached. Skipping.")
+            return
+
+        # Update the last location update time
+        self.last_location_update_time = current_time
+
+        # Fetch the current location
+        location = await self.fetch_location()
+        if not location:
+            self.log("debug", "Location is null, skipping update")
+            return
+
+        accuracy = location.get("accuracy", float("inf"))
+        if accuracy > self.config.accuracy_threshold:
+            self.log("debug",
+                     f"Location accuracy {accuracy} exceeds threshold {self.config.accuracy_threshold}. Skipping publish.")
+            return
+
+        if self.last_published_location:
+            distance = self.calculate_distance(self.last_published_location, location)
+            if distance < self.config.distance_threshold:
+                self.log("debug",
+                         f"Location change ({distance}m) is below threshold {self.config.distance_threshold}m. Skipping publish.")
+                return
+
+        # Publish the new location
+        success = await self.publish_location(location)
+        if success:
+            self.log(f"Published location: {location}")
+            self.last_published_location = location
+        else:
+            self.log("error", "Failed to publish location.")
 
 
 if __name__ == "__main__":
-    app = SampleApplication(config=SampleConfig())
-    run_app(app)
+    run_app(LocationManager(config=LocationManagerConfig()))

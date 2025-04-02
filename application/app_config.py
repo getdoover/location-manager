@@ -3,26 +3,12 @@ from pathlib import Path
 from pydoover import config
 
 
-class SampleConfig(config.ApplicationConfig):
+class LocationManagerConfig(config.Schema):
     def __init__(self):
-        # these 2 are device specific, and inherit from the device-set variables.
-        # However, the user can override them if they wish.
-
-        self.num_di = config.Integer(
-            "Digital Input Count",
-            default=config.Variable("device", "digitalInputCount"),
-            min_val=0,
-        )
-        self.num_do = config.Integer(
-            "Digital Output Count",
-            default=config.Variable("device", "digitalOutputCount"),
-            min_val=0,
-        )
-
-        self.outputs_enabled = config.Boolean("Digital Outputs Enabled", default=True)
-        self.funny_message = config.String("A Funny Message")  # this will be required as no default given.
-
+        self.accuracy_threshold = config.Decimal("Accuracy Threshold (%)", default=10, min_val=0, max_val=100)
+        self.distance_threshold = config.Decimal("Distance Threshold (m)", default=15, min_val=0)
+        self.update_freq_secs = config.Integer("Update Frequency (seconds)", default=15, min_val=0)
 
 if __name__ == "__main__":
-    c = SampleConfig()
+    c = LocationManagerConfig()
     c.export(Path("app_config.json"))
