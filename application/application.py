@@ -3,12 +3,12 @@ import time
 
 from typing import Optional
 
-from pydoover.docker import DockerApplication, run_app
+from pydoover.docker import Application, run_app
 
 from app_config import LocationManagerConfig
 
 
-class LocationManager(DockerApplication):
+class LocationManager(Application):
     config: LocationManagerConfig
 
     def __init__(self, *args, **kwargs):
