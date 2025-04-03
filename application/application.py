@@ -1,3 +1,4 @@
+import logging
 import math
 import time
 
@@ -7,6 +8,7 @@ from pydoover.docker import Application, run_app
 
 from app_config import LocationManagerConfig
 
+log = logging.getLogger()
 
 class LocationManager(Application):
     config: LocationManagerConfig
@@ -21,7 +23,7 @@ class LocationManager(Application):
         try:
             location = await self.platform_iface.get_location_async()
             if not location:
-                self.log("warning", "Failed to fetch location.")
+                log.warning("Failed to fetch location.")
                 return None
 
             ## Transform the location data to a dictionary
@@ -32,10 +34,10 @@ class LocationManager(Application):
                 "accuracy": location.accuracy_m,
             }
 
-            self.log("debug", f"Fetched location: {location}")
+            log.debug(f"Fetched location: {location}")
             return location
         except Exception as e:
-            self.log("error", f"Error fetching location: {e}")
+            log.error(f"Error fetching location: {e}")
             return None
 
     @staticmethod
@@ -59,7 +61,7 @@ class LocationManager(Application):
         return R * c
 
     async def handle_location_channel_update(self, channel_name, aggregate):
-        self.log("debug", f"Received update from {channel_name}: {aggregate}")
+        log.debug(f"Received update from {channel_name}: {aggregate}")
         if aggregate and channel_name == "location":
             recv_location = aggregate
             if isinstance(aggregate, str):
@@ -76,11 +78,11 @@ class LocationManager(Application):
         try:
             return await self.publish_to_channel("location", location)
         except Exception as e:
-            self.log("error", f"Error publishing location: {e}")
+            log.error(f"Error publishing location: {e}")
             return False
 
     async def setup(self):
-        self.log("Setting up LocationManager...")
+        log.info("Setting up LocationManager...")
         self.device_agent.add_subscription("location", self.handle_location_channel_update)
 
     async def main_loop(self):
@@ -89,7 +91,7 @@ class LocationManager(Application):
         # Check if the location update frequency interval has passed
         if self.last_location_update_time is not None and \
                 (current_time - self.last_location_update_time < self.config.update_freq_secs):
-            self.log("debug", "Location update frequency interval not reached. Skipping.")
+            log.debug("Location update frequency interval not reached. Skipping.")
             return
 
         # Update the last location update time
@@ -98,29 +100,29 @@ class LocationManager(Application):
         # Fetch the current location
         location = await self.fetch_location()
         if not location:
-            self.log("debug", "Location is null, skipping update")
+            log.debug("Location is null, skipping update")
             return
 
         accuracy = location.get("accuracy", float("inf"))
         if accuracy > self.config.accuracy_threshold:
-            self.log("debug",
+            log.info("debug",
                      f"Location accuracy {accuracy} exceeds threshold {self.config.accuracy_threshold}. Skipping publish.")
             return
 
         if self.last_published_location:
             distance = self.calculate_distance(self.last_published_location, location)
             if distance < self.config.distance_threshold:
-                self.log("debug",
+                log.info("debug",
                          f"Location change ({distance}m) is below threshold {self.config.distance_threshold}m. Skipping publish.")
                 return
 
         # Publish the new location
         success = await self.publish_location(location)
         if success:
-            self.log(f"Published location: {location}")
+            log.info(f"Published location: {location}")
             self.last_published_location = location
         else:
-            self.log("error", "Failed to publish location.")
+            log.error("Failed to publish location.")
 
 
 if __name__ == "__main__":
