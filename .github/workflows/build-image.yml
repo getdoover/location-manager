@@ -1,18 +1,18 @@
-name: Publish Docker image
+name: Deploy Location Manager
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - 'application/**'
-  release:
-    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  push_to_registries:
-    name: Push Docker image to multiple registries
+  build_test_push:
+    name: Build, Test and Push Docker Image
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -23,7 +23,6 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      # this is to have permission to pull the base image...
       - name: Log in to Docker Hub
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
         with:
@@ -36,7 +35,7 @@ jobs:
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -44,24 +43,29 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: |
-            ghcr.io/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push Docker images
-        id: push
+      - name: Build Image
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
-          context: application/
-          platforms: linux/arm64
-          push: true
+          context: warning_manager/
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
+      - name: Test Image
+        run: |
+          docker run --rm --entrypoint python3 ${{ steps.meta.outputs.tags }} -m pytest
+
+      - name: Push Images
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
-          subject-name: ghcr.io/${{ github.repository }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          context: warning_manager/
+          platforms: linux/arm64,linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
