@@ -2,3 +2,4 @@ services:
   location_manager:
     build: .
     restart: unless-stopped
+    network_mode: host
