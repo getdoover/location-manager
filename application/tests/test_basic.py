@@ -6,7 +6,7 @@ This ensures all modules are importable and that the config is valid.
 import sys
 from pathlib import Path
 
-sys.path.append((Path(__file__).absolute().parent.parent / "application").as_posix())
+sys.path.append(Path(__file__).absolute().parent.parent.as_posix())
 
 def test_import_app():
     from application import LocationManager

@@ -1,6 +1,6 @@
 services:
   location-manager:
-    image: ghcr.io/getdoover/app-template:main
+    image: ghcr.io/getdoover/location-manager:main
     restart: unless-stopped
     environment:
       - APP_KEY=${APP_KEY}
