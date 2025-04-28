@@ -1,3 +1,40 @@
 {
-    "deployment_package_dir": "docker_package/"
+    "deployment_package_dir": "deployment/",
+    "location_manager": {
+        "config_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "",
+            "title": "Application Config",
+            "type": "object",
+            "properties": {
+                "accuracy_threshold_(%)": {
+                    "title": "Accuracy Threshold (%)",
+                    "x-name": "accuracy_threshold_(%)",
+                    "x-hidden": false,
+                    "type": "number",
+                    "default": 10.0,
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "distance_threshold_(m)": {
+                    "title": "Distance Threshold (m)",
+                    "x-name": "distance_threshold_(m)",
+                    "x-hidden": false,
+                    "type": "number",
+                    "default": 15.0,
+                    "minimum": 0
+                },
+                "update_frequency_(seconds)": {
+                    "title": "Update Frequency (seconds)",
+                    "x-name": "update_frequency_(seconds)",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "default": 15,
+                    "minimum": 0
+                }
+            },
+            "additionalElements": true,
+            "required": []
+        }
+    }
 }
