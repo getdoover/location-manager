@@ -90,7 +90,7 @@ class LocationManager(Application):
 
         # Check if the location update frequency interval has passed
         if self.last_location_update_time is not None and \
-                (current_time - self.last_location_update_time < self.config.update_freq_secs):
+                (current_time - self.last_location_update_time < self.config.update_freq_secs.value):
             log.debug("Location update frequency interval not reached. Skipping.")
             return
 
@@ -104,16 +104,19 @@ class LocationManager(Application):
             return
 
         accuracy = location.get("accuracy", float("inf"))
-        if accuracy > self.config.accuracy_threshold:
+        if accuracy > self.config.accuracy_threshold.value:
             log.info("debug",
-                     f"Location accuracy {accuracy} exceeds threshold {self.config.accuracy_threshold}. Skipping publish.")
+                     f"Location accuracy {accuracy} exceeds threshold {self.config.accuracy_threshold.value}. Skipping publish.")
             return
 
         if self.last_published_location:
             distance = self.calculate_distance(self.last_published_location, location)
-            if distance < self.config.distance_threshold:
-                log.info("debug",
-                         f"Location change ({distance}m) is below threshold {self.config.distance_threshold}m. Skipping publish.")
+            if distance < self.config.distance_threshold.value:
+                log.info(
+                    "debug",
+                     f"Location change ({distance}m) is below threshold "
+                     f"{self.config.distance_threshold.value}m. Skipping publish."
+                )
                 return
 
         # Publish the new location
