@@ -1,6 +1,20 @@
 {
-    "deployment_package_dir": "deployment/",
     "location_manager": {
+        "key": "e9dfe5b7-dc48-44d1-a924-f8934545b90f",
+        "name": "doover_location_manager",
+        "display_name": "Location Management",
+        "type": "DEV",
+        "visibility": "PUB",
+        "allow_many": false,
+        "description": "App to report device location from the GNSS module on a 4G card.",
+        "long_description": "README.md",
+        "depends_on": [
+            "platform_interface"
+        ],
+        "owner_org": "36a22e32-ab81-4a39-b400-869d532a052d",
+        "image_name": "ghcr.io/getdoover/location-manager:main",
+        "container_registry_profile": "88953909-e9c4-4f81-9ec0-56239d4b0a2e",
+        "build_args": "--platform linux/amd64,linux/arm64",
         "config_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": "",

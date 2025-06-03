@@ -4,9 +4,9 @@ import time
 
 from typing import Optional
 
-from pydoover.docker import Application, run_app
+from pydoover.docker import Application
 
-from app_config import LocationManagerConfig
+from .app_config import LocationManagerConfig
 
 log = logging.getLogger()
 
@@ -126,7 +126,3 @@ class LocationManager(Application):
             self.last_published_location = location
         else:
             log.error("Failed to publish location.")
-
-
-if __name__ == "__main__":
-    run_app(LocationManager(config=LocationManagerConfig()))

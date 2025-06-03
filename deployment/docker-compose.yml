@@ -1,7 +1,0 @@
-services:
-  location-manager:
-    image: ghcr.io/getdoover/location-manager:main
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - APP_KEY=${APP_KEY}
