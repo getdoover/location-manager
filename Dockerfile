@@ -1,5 +1,7 @@
 FROM spaneng/doover_device_base AS base_image
-LABEL doover.app="true"
+LABEL com.doover.app="true"
+LABEL com.doover.managed="true"
+HEALTHCHECK --interval=30s --timeout=2s --start-period=5s CMD curl -f "127.0.0.1:$HEALTHCHECK_PORT" || exit 1
 
 ## FIRST STAGE ##
 FROM base_image AS builder

@@ -8,20 +8,15 @@ from pydoover.docker import Application
 
 from .app_config import LocationManagerConfig
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 class LocationManager(Application):
+    config_cls = LocationManagerConfig
     config: LocationManagerConfig
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.last_published_location = None
-        self.last_location_update_time: Optional[float] = None
 
     async def fetch_location(self) -> Optional[dict]:
         try:
-            location = await self.platform_iface.get_location_async()
+            location = await self.platform_iface.fetch_location()
             if not location:
                 log.warning("Failed to fetch location.")
                 return None
@@ -60,30 +55,54 @@ class LocationManager(Application):
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return R * c
 
-    async def handle_location_channel_update(self, channel_name, aggregate):
-        log.debug(f"Received update from {channel_name}: {aggregate}")
-        if aggregate and channel_name == "location":
-            recv_location = aggregate
-            if isinstance(aggregate, str):
-                recv_location = {}
+    @staticmethod
+    def _location_from_data(data: Optional[dict]) -> Optional[dict]:
+        """Map raw aggregate data to a location dict, or None if it has no coordinates.
 
-            self.last_published_location = {
-                "lat": recv_location.get("lat", None),
-                "long": recv_location.get("long", None),
-                "alt": recv_location.get("alt", None),
-                "accuracy": recv_location.get("accuracy", None),
-            }
+        Restores the original guard that skipped assignment for empty/cleared
+        aggregates so we never store a truthy dict full of Nones (which would
+        crash calculate_distance on the next main_loop).
+        """
+        if not data or data.get("lat") is None or data.get("long") is None:
+            return None
+        return {
+            "lat": data.get("lat"),
+            "long": data.get("long"),
+            "alt": data.get("alt"),
+            "accuracy": data.get("accuracy"),
+        }
+
+    async def on_aggregate_update(self, event):
+        if event.channel.name != "location":
+            return
+        data = event.aggregate.data if event.aggregate else {}
+        location = self._location_from_data(data)
+        if location is not None:
+            self.last_published_location = location
+
+    async def on_channel_sync(self, event):
+        # Hydrates last_published_location from the channel's last-published
+        # aggregate delivered once on subscribe, so cross-restart distance
+        # thresholding persists. ChannelSyncEvent carries only .aggregate
+        # (no .channel); the app subscribes only to the "location" channel.
+        data = event.aggregate.data if event.aggregate else {}
+        location = self._location_from_data(data)
+        if location is not None:
+            self.last_published_location = location
 
     async def publish_location(self, location: dict) -> bool:
         try:
-            return await self.publish_to_channel("location", location)
+            agg = await self.update_channel_aggregate("location", location)
+            return agg is not None
         except Exception as e:
             log.error(f"Error publishing location: {e}")
             return False
 
     async def setup(self):
         log.info("Setting up LocationManager...")
-        self.device_agent.add_subscription("location", self.handle_location_channel_update)
+        self.last_published_location = None
+        self.last_location_update_time: Optional[float] = None
+        await self.subscribe("location")
 
     async def main_loop(self):
         current_time = time.time()
@@ -103,19 +122,24 @@ class LocationManager(Application):
             log.debug("Location is null, skipping update")
             return
 
-        accuracy = location.get("accuracy", float("inf"))
+        accuracy = location.get("accuracy")
+        if accuracy is None:
+            # Unknown accuracy (e.g. GNSS module reports no fix quality) —
+            # treat as worst-case so we never publish an unqualified fix.
+            accuracy = float("inf")
         if accuracy > self.config.accuracy_threshold.value:
-            log.info("debug",
-                     f"Location accuracy {accuracy} exceeds threshold {self.config.accuracy_threshold.value}. Skipping publish.")
+            log.debug(
+                f"Location accuracy {accuracy} exceeds threshold "
+                f"{self.config.accuracy_threshold.value}. Skipping publish."
+            )
             return
 
         if self.last_published_location:
             distance = self.calculate_distance(self.last_published_location, location)
             if distance < self.config.distance_threshold.value:
-                log.info(
-                    "debug",
-                     f"Location change ({distance}m) is below threshold "
-                     f"{self.config.distance_threshold.value}m. Skipping publish."
+                log.debug(
+                    f"Location change ({distance}m) is below threshold "
+                    f"{self.config.distance_threshold.value}m. Skipping publish."
                 )
                 return
 

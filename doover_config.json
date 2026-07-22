@@ -12,43 +12,141 @@
             "platform_interface"
         ],
         "owner_org": "36a22e32-ab81-4a39-b400-869d532a052d",
+        "owner_org_id": null,
         "image_name": "ghcr.io/getdoover/location-manager:main",
         "container_registry_profile": "88953909-e9c4-4f81-9ec0-56239d4b0a2e",
+        "container_registry_profile_id": 93955828574386692,
         "build_args": "--platform linux/amd64,linux/arm64",
+        "export_ui_command": "NO_EXPORT",
         "config_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": "",
-            "title": "Application Config",
+            "title": "$default",
             "type": "object",
             "properties": {
-                "accuracy_threshold_(%)": {
+                "accuracy_threshold": {
                     "title": "Accuracy Threshold (%)",
-                    "x-name": "accuracy_threshold_(%)",
+                    "x-name": "accuracy_threshold",
                     "x-hidden": false,
-                    "type": "number",
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "x-required": false,
                     "default": 10.0,
+                    "x-position": 0,
                     "minimum": 0,
                     "maximum": 100
                 },
-                "distance_threshold_(m)": {
+                "distance_threshold_m": {
                     "title": "Distance Threshold (m)",
-                    "x-name": "distance_threshold_(m)",
+                    "x-name": "distance_threshold_m",
                     "x-hidden": false,
-                    "type": "number",
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "x-required": false,
                     "default": 15.0,
+                    "x-position": 1,
                     "minimum": 0
                 },
-                "update_frequency_(seconds)": {
+                "update_frequency_seconds": {
                     "title": "Update Frequency (seconds)",
-                    "x-name": "update_frequency_(seconds)",
+                    "x-name": "update_frequency_seconds",
                     "x-hidden": false,
-                    "type": "integer",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "x-required": false,
                     "default": 15,
+                    "x-position": 2,
                     "minimum": 0
                 }
             },
             "additionalElements": true,
             "required": []
         }
+    },
+    "doover_location_manager": {
+        "name": "doover_location_manager",
+        "display_name": "Location Management",
+        "description": "App to report device location from the GNSS module on a 4G card.",
+        "type": "DEV",
+        "visibility": "PUB",
+        "allow_many": false,
+        "config_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "",
+            "title": "$default",
+            "type": "object",
+            "properties": {
+                "accuracy_threshold": {
+                    "title": "Accuracy Threshold (%)",
+                    "x-name": "accuracy_threshold",
+                    "x-hidden": false,
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "default": 10.0,
+                    "x-position": 0,
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "distance_threshold_m": {
+                    "title": "Distance Threshold (m)",
+                    "x-name": "distance_threshold_m",
+                    "x-hidden": false,
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "default": 15.0,
+                    "x-position": 1,
+                    "minimum": 0
+                },
+                "update_frequency_seconds": {
+                    "title": "Update Frequency (seconds)",
+                    "x-name": "update_frequency_seconds",
+                    "x-hidden": false,
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "x-required": false,
+                    "default": 15,
+                    "x-position": 2,
+                    "minimum": 0
+                }
+            },
+            "additionalElements": true,
+            "required": []
+        },
+        "depends_on": [
+            "platform_interface"
+        ],
+        "organisation_id": null,
+        "container_registry_profile_id": 93955828574386692,
+        "image_name": "ghcr.io/getdoover/location-manager:main",
+        "id": 205576086606641167,
+        "key": "e9dfe5b7-dc48-44d1-a924-f8934545b90f",
+        "owner_org_id": null,
+        "code_repo_id": null,
+        "repo_branch": "main",
+        "build_args": "--platform linux/amd64,linux/arm64",
+        "lambda_config": null,
+        "ui_schema": null,
+        "icon_url": null,
+        "banner_url": null,
+        "staging_config": {},
+        "build_widget_command": null,
+        "export_config_command": null,
+        "export_ui_command": "NO_EXPORT",
+        "run_command": null,
+        "lambda_arn": null
     }
 }

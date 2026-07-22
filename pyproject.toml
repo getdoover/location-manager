@@ -1,15 +1,16 @@
 [project]
 name = "location-manager"
 version = "0.1.0"
-description = "Add your description here"
+description = "Reports device GNSS location to the 'location' channel with accuracy/distance/frequency thresholds."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pydoover>=0.4.0",
+    "pydoover>=1.1.4",
 ]
 
 [project.scripts]
-doover-app-run = "locaation_manager:main"
+doover-app-run = "location_manager:main"
+export-config = "location_manager.app_config:export"
 
 [build-system]
 requires = ["hatchling"]
