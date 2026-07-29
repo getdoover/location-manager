@@ -1,26 +1,36 @@
-# Application Template
+# Location Management
 
-This repository is a template for creating a new application. This example currently only showcases a Docker application.
-Future work will include other examples, including an MQTT device, an HTTP integration, slack integration and others.
+A Doover device app that keeps track of where a device is. It periodically reads
+the GNSS fix from the device's 4G card (via the platform interface) and publishes
+it to the `location` channel — both the channel aggregate (current position) and
+a channel message (location history/track).
 
-The basic structure of the repository is as follows:
+## How it works
 
-```
-doover_config.json  <-- Configuration file for the application
-application/        <-- Application directory
-  Dockerfile        <-- Dockerfile for the application
-  Pipfile           <-- Python requirements file
-  Pipfile.lock      <-- Python requirements lock file
-  application.py    <-- Main application code
-  app_config.py     <-- Config schema definition
-  app_config.json   <-- Config schema export
-```
+Every update interval the app:
 
-The `doover_config.json` file is the doover configuration file for the application. 
-It defines where the Doover site should find the application code. In our case, this is a fairly straightforward 
-```json
-{
-    "deployment_package_dir": "application/"
-}
-```
+1. Fetches the current GNSS fix from the platform interface.
+2. Discards the fix if its reported accuracy is worse than the accuracy threshold.
+3. Skips publishing if the device has moved less than the distance threshold
+   since the last published location.
+4. Otherwise publishes the location to the `location` channel — updating the
+   aggregate and creating a message so the movement history is preserved.
 
+Published locations carry `lat`, `long`, `alt` (m) and `accuracy` (m).
+
+## Configuration
+
+| Setting | Default | Description |
+|---|---|---|
+| Accuracy Threshold (m) | 8 | Fixes with worse reported accuracy than this are ignored. |
+| Distance Threshold (m) | 10 | Minimum movement from the last published location before a new one is logged. |
+| Update Frequency (seconds) | 15 | How often to check the current location. |
+
+Tune the distance threshold to suit the asset: it should sit comfortably above
+the typical GPS accuracy (otherwise fix-to-fix jitter gets logged as movement),
+and below the smallest movement you care about tracking.
+
+## Requirements
+
+- A device with a GNSS-capable 4G card (e.g. a Doovit)
+- The `platform_interface` app (declared as a dependency)

@@ -13,7 +13,7 @@ class LocationManagerConfig(config.Schema):
 
 def export():
     LocationManagerConfig.export(
-        Path(__file__).parents[2] / "doover_config.json", "location_manager"
+        Path(__file__).parents[2] / "doover_config.json", "doover_location_manager"
     )
 
 
