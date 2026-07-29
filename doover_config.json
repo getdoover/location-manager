@@ -25,7 +25,7 @@
             "type": "object",
             "properties": {
                 "accuracy_threshold": {
-                    "title": "Accuracy Threshold (%)",
+                    "title": "Accuracy Threshold (m)",
                     "x-name": "accuracy_threshold",
                     "x-hidden": false,
                     "type": [
@@ -33,7 +33,7 @@
                         "null"
                     ],
                     "x-required": false,
-                    "default": 10.0,
+                    "default": 8.0,
                     "x-position": 0,
                     "minimum": 0,
                     "maximum": 100
@@ -47,7 +47,7 @@
                         "null"
                     ],
                     "x-required": false,
-                    "default": 15.0,
+                    "default": 10.0,
                     "x-position": 1,
                     "minimum": 0
                 },

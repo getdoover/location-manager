@@ -91,9 +91,15 @@ class LocationManager(Application):
             self.last_published_location = location
 
     async def publish_location(self, location: dict) -> bool:
+        # Aggregate updates and messages are independent in Doover 2.0:
+        # the aggregate carries the current position, while messages form
+        # the location history/track. Publish both.
         try:
             agg = await self.update_channel_aggregate("location", location)
-            return agg is not None
+            if agg is None:
+                return False
+            await self.create_message("location", location)
+            return True
         except Exception as e:
             log.error(f"Error publishing location: {e}")
             return False

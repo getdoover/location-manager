@@ -5,9 +5,9 @@ from pydoover import config
 
 class LocationManagerConfig(config.Schema):
     accuracy_threshold = config.Number(
-        "Accuracy Threshold (%)", name="accuracy_threshold", default=10.0, minimum=0, maximum=100
+        "Accuracy Threshold (m)", name="accuracy_threshold", default=8.0, minimum=0, maximum=100
     )
-    distance_threshold = config.Number("Distance Threshold (m)", default=15.0, minimum=0)
+    distance_threshold = config.Number("Distance Threshold (m)", default=10.0, minimum=0)
     update_freq_secs = config.Integer("Update Frequency (seconds)", default=15, minimum=0)
 
 
