@@ -32,5 +32,5 @@ and below the smallest movement you care about tracking.
 
 ## Requirements
 
-- A device with a GNSS-capable 4G card (e.g. a Doovit)
+- A GNSS-capable device (e.g. a Doovit)
 - The `platform_interface` app (declared as a dependency)
